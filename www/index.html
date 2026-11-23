@@ -486,8 +486,43 @@
         }
         sel.value = uid;
         activeUserId = uid;
-        initTelegramMiniApp();
+        initQueryBridge();
+      initTelegramMiniApp();
       renderAll();
+      }
+    }
+
+    
+    function initQueryBridge() {
+      const q = new URLSearchParams(window.location.search);
+      const apiParam = (q.get("api") || "").trim();
+      if (apiParam && !localStorage.getItem(KEY_SYNC)) {
+        localStorage.setItem(KEY_SYNC, apiParam);
+        const inp = document.getElementById("syncEndpoint");
+        if (inp) inp.value = apiParam;
+      }
+      const tgId = (q.get("tg_id") || "").trim();
+      if (tgId && !window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+        const uid = "tg_" + tgId;
+        const uname = q.get("tg_username") ? "@" + q.get("tg_username") : (q.get("tg_name") || "TG用户");
+        if (!state.users[uid]) {
+          state.users[uid] = {
+            id: uid, name: uname, role: "Telegram用户",
+            balance: 0, frozen: 0, employerScore: 5.0, employerCount: 0, workerScore: 5.0, workerCount: 0
+          };
+          saveDB();
+        }
+        const sel = document.getElementById("currentUserSelect");
+        if (sel) {
+          if (!Array.from(sel.options).some(o => o.value === uid)) {
+            const opt = document.createElement("option");
+            opt.value = uid;
+            opt.textContent = "✈️ TG本人 · " + uname;
+            sel.prepend(opt);
+          }
+          sel.value = uid;
+          activeUserId = uid;
+        }
       }
     }
 

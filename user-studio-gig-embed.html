@@ -1,0 +1,62 @@
+<!-- ========== GigBounty Studio 零工悬赏内嵌模块（可直接嵌入 User Studio Mini App） ========== -->
+<section id="gigbounty-embed-section" style="margin: 16px 0; background: #0b1120; border: 1px solid #2a3f5f; border-radius: 14px; padding: 14px; color: #f8fafc;">
+  <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+    <div>
+      <div style="font-size: 15px; font-weight: 700; color: #f5d076;">⚡ GigBounty Studio · 零工悬赏与双向评价</div>
+      <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+        TON USDT 托管 · 10% 平台抽佣 · 10 USDT 起提 · @Userstudiobot 客服/仲裁
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button type="button" id="toggleGigFrameBtn" onclick="toggleGigBountyFrame()" style="background: linear-gradient(135deg, #b8860b 0%, #d4af37 100%); color: #0f172a; border: none; border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer;">
+        展开零工大厅
+      </button>
+      <a href="https://bubu629.github.io/gig-bounty-studio/" target="_blank" rel="noopener" style="background: #1e3a5f; color: #e0f2fe; text-decoration: none; border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-weight: 600;">
+        独立窗口打开
+      </a>
+    </div>
+  </div>
+
+  <div id="gigBountyFrameWrap" style="display: none; margin-top: 12px;">
+    <iframe
+      id="gigBountyIframe"
+      data-src="https://bubu629.github.io/gig-bounty-studio/"
+      style="width: 100%; height: 78vh; min-height: 540px; border: 1px solid #334155; border-radius: 10px; background: #090f1d;"
+      allow="clipboard-write"
+    ></iframe>
+  </div>
+</section>
+
+<script>
+(function () {
+  const GIG_WEB_URL = "https://bubu629.github.io/gig-bounty-studio/";
+  const GIG_API_URL = "https://gig-bounty-api.zhangbanzhuan.workers.dev";
+
+  window.toggleGigBountyFrame = function () {
+    const wrap = document.getElementById("gigBountyFrameWrap");
+    const iframe = document.getElementById("gigBountyIframe");
+    const btn = document.getElementById("toggleGigFrameBtn");
+    if (!wrap || !iframe || !btn) return;
+
+    const isHidden = wrap.style.display === "none";
+    if (isHidden) {
+      if (!iframe.src) {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
+        const params = new URLSearchParams({
+          api: GIG_API_URL,
+          tg_id: tgUser.id ? String(tgUser.id) : "",
+          tg_username: tgUser.username || "",
+          tg_name: tgUser.first_name || ""
+        });
+        iframe.src = GIG_WEB_URL + "?" + params.toString();
+      }
+      wrap.style.display = "block";
+      btn.textContent = "收起零工大厅";
+    } else {
+      wrap.style.display = "none";
+      btn.textContent = "展开零工大厅";
+    }
+  };
+})();
+</script>
+
