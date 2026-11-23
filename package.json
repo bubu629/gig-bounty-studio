@@ -1,0 +1,9 @@
+{
+  "name": "gig-bounty-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GigBounty Studio — 零工任务大厅、悬赏托管与双向评价平台 (Web + Android APK)",
+  "scripts": {
+    "build": "echo 'Static web assets ready in www/'"
+  }
+}

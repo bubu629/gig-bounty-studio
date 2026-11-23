@@ -1,0 +1,6 @@
+{
+  "appId": "com.userstudio.gigbounty",
+  "appName": "GigBounty 零工悬赏",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
