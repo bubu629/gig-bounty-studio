@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>GigBounty Studio v1.0.0 — 零工悬赏与双向评价平台</title>
+  <title>GigBounty Studio v1.0.1 — 零工悬赏与双向评价平台</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -222,6 +223,18 @@
         <label>详细需求与验收标准</label>
         <textarea id="pubDesc" placeholder="写明具体交付物格式、修改次数、验收标准..."></textarea>
 
+        
+        <div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;margin-top:10px;font-size:12.5px;line-height:1.6;">
+          <div style="color:#f5d076;font-weight:700;margin-bottom:4px;">💎 TON USDT 悬赏托管收款地址（平台抽佣 10% · 接单人实得 90%）</div>
+          <div style="font-family:monospace;word-break:break-all;color:#e0f2fe;background:#090f1d;padding:7px 9px;border-radius:6px;margin:4px 0;" id="platformTonAddr">UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85</div>
+          <div class="row" style="margin-top:6px;">
+            <button type="button" class="btn-slate" style="padding:7px 10px;font-size:12px;" onclick="copyPlatformWallet()">📋 复制收款地址</button>
+            <button type="button" class="btn-gold" style="padding:7px 10px;font-size:12px;" onclick="openTonPayLink()">⚡ 拉起 TON 钱包支付托管</button>
+          </div>
+          <label style="margin-top:8px;">TON 链上转账哈希 / 交易备注（悬赏托管必填，普通任务可留空）</label>
+          <input type="text" id="pubEscrowTx" placeholder="粘贴 TON 支付交易哈希（或本地演示模式直接留空）" />
+        </div>
+
         <div class="row" style="margin-top:12px;">
           <button class="btn-slate" onclick="aiPolishTask()">✨ AI 一键润色需求与验收标准</button>
           <button class="btn-gold" onclick="publishTask()">🚀 立即发布并上架</button>
@@ -238,6 +251,28 @@
           完整零工闭环：<b>发布托管 → 接单人抢单 → 提交交付成果 → 雇主验收放款 → 双方互评（任务评价 + 雇主评价）</b>
         </div>
       </div>
+      
+      <div class="card" style="border-color:rgba(34,197,94,0.45);">
+        <h3>💸 接单人佣金提现（满 10 USDT 起提 · TON 钱包结算）</h3>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">
+          验收结算自动扣除 <b>10%</b> 平台服务费，余额满 <b>10 USDT</b> 即可申请提现，通过 <b>@Userstudiobot</b> 审核并打款至您的 TON 钱包。
+        </div>
+        <div class="row">
+          <div>
+            <label style="margin-top:0;">提现金额 (USDT，最低 10)</label>
+            <input type="number" id="wdAmount" value="10" min="10" />
+          </div>
+          <div style="flex:2;">
+            <label style="margin-top:0;">您的 TON 收款钱包地址 (UQ... / EQ...)</label>
+            <input type="text" id="wdWallet" placeholder="粘贴您的 TON 钱包地址..." />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn-green" onclick="requestWithdraw()">💸 提交提现申请</button>
+          <button class="btn-slate" onclick="openSupportBot('咨询提现或订单仲裁')">💬 联系 @Userstudiobot 客服/仲裁</button>
+        </div>
+      </div>
+
       <div id="myOrdersList"></div>
     </div>
 
@@ -365,6 +400,96 @@
         }
       ]
     };
+
+    
+    const PLATFORM_FEE_RATE = 0.10;
+    const MIN_WITHDRAW_USDT = 10;
+    const PLATFORM_TON_WALLET = "UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85";
+    const SUPPORT_BOT = "Userstudiobot";
+
+    function copyPlatformWallet() {
+      navigator.clipboard?.writeText(PLATFORM_TON_WALLET).then(() => {
+        alert("✅ 已复制平台 TON 收款地址：\n" + PLATFORM_TON_WALLET);
+      }).catch(() => {
+        prompt("请手动复制平台 TON 收款地址：", PLATFORM_TON_WALLET);
+      });
+    }
+
+    function openTonPayLink() {
+      const amt = parseFloat(document.getElementById("pubReward").value || "10");
+      const title = encodeURIComponent("GigBounty_" + (document.getElementById("pubTitle").value.trim().slice(0, 18) || "Task"));
+      const tonUrl = "ton://transfer/" + PLATFORM_TON_WALLET + "?text=" + title + "_USDT_" + amt;
+      window.open(tonUrl, "_blank");
+    }
+
+    function openSupportBot(topic) {
+      const url = "https://t.me/" + SUPPORT_BOT + "?start=" + encodeURIComponent(topic || "gig_support");
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    }
+
+    function requestWithdraw() {
+      const amt = parseFloat(document.getElementById("wdAmount").value || "0");
+      const wallet = (document.getElementById("wdWallet").value || "").trim();
+      if (amt < MIN_WITHDRAW_USDT) return alert("最低提现门槛为 " + MIN_WITHDRAW_USDT + " USDT！");
+      if (!wallet || wallet.length < 20) return alert("请填写有效的 TON 收款钱包地址！");
+      const u = state.users[activeUserId];
+      if (u.balance < amt) return alert("可用余额不足（当前可用：$" + u.balance.toFixed(2) + "）！");
+
+      const syncUrl = (localStorage.getItem(KEY_SYNC) || "").trim().replace(/\/+$/, "");
+      if (syncUrl) {
+        fetch(syncUrl + "/api/gig/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tg_id: u.id, username: u.name, amount_usdt: amt, ton_wallet: wallet })
+        }).then(r => r.json()).then(d => {
+          if (!d.ok) return alert("提现失败：" + (d.error || "未知错误"));
+          u.balance -= amt;
+          saveDB();
+          alert("✅ 提现申请已推送至云端后台，将通过 @" + SUPPORT_BOT + " 审核打款！");
+        }).catch(e => alert("云端请求失败：" + e.message));
+        return;
+      }
+
+      u.balance -= amt;
+      saveDB();
+      if (confirm("✅ 已扣减余额 $" + amt + " 并生成提现工单！\n是否立即跳转 @" + SUPPORT_BOT + " 发送提现收款地址加速审核？")) {
+        openSupportBot("withdraw_" + amt + "USDT_" + wallet.slice(0, 12));
+      }
+    }
+
+    function initTelegramMiniApp() {
+      const tg = window.Telegram?.WebApp;
+      if (!tg) return;
+      tg.ready();
+      tg.expand();
+      const tgUser = tg.initDataUnsafe?.user;
+      if (tgUser && tgUser.id) {
+        const uid = "tg_" + tgUser.id;
+        const uname = tgUser.username ? "@" + tgUser.username : (tgUser.first_name || "TG用户");
+        if (!state.users[uid]) {
+          state.users[uid] = {
+            id: uid, name: uname, role: "Telegram用户",
+            balance: 0, frozen: 0, employerScore: 5.0, employerCount: 0, workerScore: 5.0, workerCount: 0
+          };
+          saveDB();
+        }
+        const sel = document.getElementById("currentUserSelect");
+        if (!Array.from(sel.options).some(o => o.value === uid)) {
+          const opt = document.createElement("option");
+          opt.value = uid;
+          opt.textContent = "✈️ TG本人 · " + uname;
+          sel.prepend(opt);
+        }
+        sel.value = uid;
+        activeUserId = uid;
+        initTelegramMiniApp();
+      renderAll();
+      }
+    }
 
     let state = loadDB();
     let activeUserId = "u_employer";
@@ -630,10 +755,12 @@
         if (emp.balance < t.reward) return alert("可用余额不足，无法支付赏金！");
         emp.balance -= t.reward;
       }
-      wrk.balance += t.reward;
+      const platformFee = Number((t.reward * PLATFORM_FEE_RATE).toFixed(2));
+      const workerNet = Number((t.reward - platformFee).toFixed(2));
+      wrk.balance += workerNet;
       t.status = "COMPLETED";
       saveDB();
-      alert("✅ 验收通过！赏金 $" + t.reward + " 已实时结算至接单人「" + wrk.name + "」账户，现在可以对本次任务进行评价！");
+      alert("✅ 验收通过！总赏金 $" + t.reward + "，扣除平台 10% 抽佣 ($" + platformFee + ") 后，实得 $" + workerNet + " 已结算至「" + wrk.name + "」账户！");
     }
 
     function openReviewModal(taskId, kind) {

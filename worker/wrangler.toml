@@ -1,0 +1,17 @@
+name = "gig-bounty-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+PLATFORM_FEE_RATE = "0.1"
+PLATFORM_TON_WALLET = "UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85"
+MIN_WITHDRAW_USDT = "10"
+SUPPORT_BOT_USERNAME = "Userstudiobot"
+
+# 创建 D1 后将 database_id 填入下方:
+# npx wrangler d1 create gig-bounty-db
+[[d1_databases]]
+binding = "DB"
+database_name = "gig-bounty-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
