@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GigBounty Studio v1.0.1 — 零工悬赏与双向评价平台</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #121926 0%, #1e3a5f 100%);
+      background-attachment: fixed;
+      color: #f8fafc;
+      margin: 0;
+      padding: 14px;
+      min-height: 100vh;
+    }
+    .container { max-width: 860px; margin: 0 auto; padding-bottom: 48px; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 12px; margin-bottom: 14px;
+    }
+    .brand { font-size: 18px; font-weight: 700; color: #38bdf8; letter-spacing: 0.5px; }
+    .sub { font-size: 11.5px; color: #94a3b8; margin-top: 2px; }
+    .user-pill {
+      display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.92);
+      border: 1px solid #38bdf8; border-radius: 999px; padding: 5px 12px; font-size: 12px;
+    }
+    .user-pill select {
+      background: transparent; border: none; color: #f5d076; font-weight: 700; font-size: 12px; padding: 0; margin: 0; width: auto;
+    }
+    .wallet-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px;
+    }
+    .stat-card {
+      background: rgba(9, 15, 29, 0.88); border: 1px solid #2a3f5f; border-radius: 10px; padding: 10px 12px;
+    }
+    .stat-label { font-size: 11px; color: #94a3b8; }
+    .stat-val { font-size: 16px; font-weight: 700; color: #f5d076; margin-top: 2px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tab-btn {
+      flex: 1; min-width: 90px; padding: 10px 6px; border-radius: 10px; border: 1px solid #2a3f5f;
+      background: rgba(11, 18, 34, 0.88); color: #94a3b8; font-weight: 600; font-size: 12.5px; cursor: pointer;
+    }
+    .tab-btn.active {
+      border-color: #38bdf8; color: #e0f2fe; background: rgba(30, 58, 95, 0.88);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.92); border: 1px solid #2a3f5f;
+      border-radius: 12px; padding: 15px; margin-bottom: 14px;
+    }
+    .card h3 { margin: 0 0 10px 0; font-size: 15px; color: #38bdf8; }
+    label { display: block; font-size: 12px; color: #94a3b8; margin-top: 10px; }
+    input, select, textarea {
+      width: 100%; background: #090f1d; border: 1px solid #334155; color: #fff;
+      padding: 10px; border-radius: 8px; margin-top: 4px; font-size: 13.5px; font-family: inherit;
+    }
+    textarea { min-height: 76px; resize: vertical; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 135px; }
+    button {
+      background: #2563eb; color: #fff; border: none; padding: 10px 14px;
+      border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+    }
+    .btn-gold { background: linear-gradient(135deg, #b8860b 0%, #d4af37 100%); color: #0f172a; }
+    .btn-green { background: #16a34a; }
+    .btn-red { background: #dc2626; }
+    .btn-slate { background: #334155; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Task Cards */
+    .task-item {
+      background: #090f1d; border: 1px solid #2a3f5f; border-radius: 11px; padding: 13px; margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .task-item.bounty { border-color: rgba(212, 175, 55, 0.55); background: linear-gradient(160deg, #0b1120 0%, #171f36 100%); }
+    .task-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+    .task-title { font-size: 15px; font-weight: 700; color: #f8fafc; }
+    .reward-tag {
+      font-size: 14px; font-weight: 800; color: #f5d076; background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.4); padding: 3px 10px; border-radius: 8px; white-space: nowrap;
+    }
+    .meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 7px 0; font-size: 11.5px; }
+    .pill {
+      padding: 2px 8px; border-radius: 6px; font-weight: 600;
+      background: rgba(56, 189, 248, 0.14); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .pill-bounty { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border-color: rgba(245, 158, 11, 0.45); }
+    .pill-status-open { background: rgba(34, 197, 94, 0.15); color: #86efac; border-color: rgba(34, 197, 94, 0.35); }
+    .pill-status-progress { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
+    .pill-status-submitted { background: rgba(168, 85, 247, 0.18); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.4); }
+    .pill-status-done { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.35); }
+    .task-desc { font-size: 13px; color: #cbd5e1; line-height: 1.6; margin: 6px 0 10px 0; }
+    .task-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* Review & Modal */
+    .review-box {
+      background: rgba(15, 23, 42, 0.85); border-left: 3px solid #38bdf8;
+      padding: 8px 10px; border-radius: 6px; margin-top: 8px; font-size: 12px; color: #e2e8f0;
+    }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(2, 6, 23, 0.78); display: none;
+      align-items: center; justify-content: center; padding: 16px; z-index: 999;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal-card {
+      width: 100%; max-width: 460px; background: #0f172a; border: 1px solid #38bdf8;
+      border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+    .ai-box {
+      background: #070c18; border: 1px solid #38bdf8; border-radius: 10px;
+      padding: 12px; margin-top: 10px; font-size: 13px; line-height: 1.65; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <div class="brand">⚡ GigBounty Studio · 零工悬赏平台</div>
+        <div class="sub">任务大厅 · 高额悬赏托管 · 交付验收 · 雇主与接单人双向信用评价</div>
+      </div>
+      <div class="user-pill">
+        <span>当前身份：</span>
+        <select id="currentUserSelect" onchange="switchActiveUser()">
+          <option value="u_employer">🏢 雇主 · 星辰科技 (Employer)</option>
+          <option value="u_worker1">🛠️ 接单人 · 阿杰全栈 (Worker A)</option>
+          <option value="u_worker2">🎨 接单人 · 林溪设计 (Worker B)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 账户钱包与信用概览 -->
+    <div class="wallet-bar" id="walletBar"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('hall', this)">🔥 任务大厅</button>
+      <button class="tab-btn" onclick="switchTab('publish', this)">➕ 发布任务/悬赏</button>
+      <button class="tab-btn" onclick="switchTab('myorders', this)">📋 我的订单</button>
+      <button class="tab-btn" onclick="switchTab('reputation', this)">⭐ 双向评价榜</button>
+      <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ 设置/同步</button>
+    </div>
+
+    <!-- TAB 1: 任务大厅 -->
+    <div id="panel-hall" class="panel active">
+      <div class="card">
+        <div class="row" style="align-items:flex-end;">
+          <div>
+            <label style="margin-top:0;">任务类型筛选</label>
+            <select id="filterType" onchange="renderHall()">
+              <option value="ALL">全部任务（普通零工 + 高额悬赏）</option>
+              <option value="BOUNTY">🏆 仅看高额悬赏任务（赏金已托管）</option>
+              <option value="NORMAL">📌 仅看普通零工任务</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0;">行业分类</label>
+            <select id="filterCategory" onchange="renderHall()">
+              <option value="ALL">全部分类</option>
+              <option value="软件开发">软件开发 / 脚本</option>
+              <option value="设计创意">设计创意 / 视频</option>
+              <option value="跑腿代办", "其他">线下跑腿 / 探店</option>
+              <option value="文案翻译">文案推广 / 翻译</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0;">排序方式</label>
+            <select id="sortOrder" onchange="renderHall()">
+              <option value="newest">最新发布优先</option>
+              <option value="reward_desc">赏金从高到低</option>
+              <option value="employer_rating">雇主评分最高</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="hallList"></div>
+    </div>
+
+    <!-- TAB 2: 发布任务 / 悬赏任务 -->
+    <div id="panel-publish" class="panel">
+      <div class="card">
+        <h3>➕ 发布新零工 / 悬赏任务</h3>
+        <div class="row">
+          <div>
+            <label>任务模式</label>
+            <select id="pubMode">
+              <option value="BOUNTY">🏆 悬赏任务（立即从余额预扣托管赏金，曝光置顶）</option>
+              <option value="NORMAL">📌 普通零工任务（验收确认后从余额支付）</option>
+            </select>
+          </div>
+          <div>
+            <label>任务分类</label>
+            <select id="pubCategory">
+              <option value="软件开发">软件开发 / 脚本</option>
+              <option value="设计创意">设计创意 / 视频</option>
+              <option value="跑腿代办", "其他">线下跑腿 / 探店</option>
+              <option value="文案翻译">文案推广 / 翻译</option>
+            </select>
+          </div>
+        </div>
+
+        <label>任务标题</label>
+        <input type="text" id="pubTitle" placeholder="例如：急需制作一款跨境电商商品主图海报（3张）" />
+
+        <div class="row">
+          <div>
+            <label>任务赏金（USDT / CAD）</label>
+            <input type="number" id="pubReward" value="120" min="5" />
+          </div>
+          <div>
+            <label>截止时间 / 交付周期</label>
+            <input type="text" id="pubDeadline" value="48小时内交付" />
+          </div>
+          <div>
+            <label>工作地点</label>
+            <input type="text" id="pubLocation" value="远程线上 / 全球可接" />
+          </div>
+        </div>
+
+        <label>详细需求与验收标准</label>
+        <textarea id="pubDesc" placeholder="写明具体交付物格式、修改次数、验收标准..."></textarea>
+
+        
+        <div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;margin-top:10px;font-size:12.5px;line-height:1.6;">
+          <div style="color:#f5d076;font-weight:700;margin-bottom:4px;">💎 TON USDT 悬赏托管收款地址（平台抽佣 10% · 接单人实得 90%）</div>
+          <div style="font-family:monospace;word-break:break-all;color:#e0f2fe;background:#090f1d;padding:7px 9px;border-radius:6px;margin:4px 0;" id="platformTonAddr">UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85</div>
+          <div class="row" style="margin-top:6px;">
+            <button type="button" class="btn-slate" style="padding:7px 10px;font-size:12px;" onclick="copyPlatformWallet()">📋 复制收款地址</button>
+            <button type="button" class="btn-gold" style="padding:7px 10px;font-size:12px;" onclick="openTonPayLink()">⚡ 拉起 TON 钱包支付托管</button>
+          </div>
+          <label style="margin-top:8px;">TON 链上转账哈希 / 交易备注（悬赏托管必填，普通任务可留空）</label>
+          <input type="text" id="pubEscrowTx" placeholder="粘贴 TON 支付交易哈希（或本地演示模式直接留空）" />
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button class="btn-slate" onclick="aiPolishTask()">✨ AI 一键润色需求与验收标准</button>
+          <button class="btn-gold" onclick="publishTask()">🚀 立即发布并上架</button>
+        </div>
+        <div id="pubAiBox" class="ai-box" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 我的订单（接单执行 / 交付提交 / 雇主验收打款 / 互评） -->
+    <div id="panel-myorders" class="panel">
+      <div class="card">
+        <h3>📋 我发布的任务 & 我接受的任务</h3>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">
+          完整零工闭环：<b>发布托管 → 接单人抢单 → 提交交付成果 → 雇主验收放款 → 双方互评（任务评价 + 雇主评价）</b>
+        </div>
+      </div>
+      
+      <div class="card" style="border-color:rgba(34,197,94,0.45);">
+        <h3>💸 接单人佣金提现（满 10 USDT 起提 · TON 钱包结算）</h3>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">
+          验收结算自动扣除 <b>10%</b> 平台服务费，余额满 <b>10 USDT</b> 即可申请提现，通过 <b>@Userstudiobot</b> 审核并打款至您的 TON 钱包。
+        </div>
+        <div class="row">
+          <div>
+            <label style="margin-top:0;">提现金额 (USDT，最低 10)</label>
+            <input type="number" id="wdAmount" value="10" min="10" />
+          </div>
+          <div style="flex:2;">
+            <label style="margin-top:0;">您的 TON 收款钱包地址 (UQ... / EQ...)</label>
+            <input type="text" id="wdWallet" placeholder="粘贴您的 TON 钱包地址..." />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn-green" onclick="requestWithdraw()">💸 提交提现申请</button>
+          <button class="btn-slate" onclick="openSupportBot('咨询提现或订单仲裁')">💬 联系 @Userstudiobot 客服/仲裁</button>
+        </div>
+      </div>
+
+      <div id="myOrdersList"></div>
+    </div>
+
+    <!-- TAB 4: 双向评价榜（任务评价 + 雇主评价） -->
+    <div id="panel-reputation" class="panel">
+      <div class="card">
+        <h3>⭐ 平台双向信用体系（雇主口碑 & 接单人任务评价）</h3>
+        <div id="userStatsGrid" class="wallet-bar"></div>
+      </div>
+      <div class="card">
+        <h3>💬 最新双向评价记录</h3>
+        <div id="reviewsFeed"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: 设置 / 云端同步配置 -->
+    <div id="panel-settings" class="panel">
+      <div class="card">
+        <h3>☁️ 云端数据存储与多端同步（可选配置）</h3>
+        <div style="font-size:12.5px;color:#cbd5e1;line-height:1.65;">
+          当前默认使用本机 <code>localStorage</code> 离线持久化存储（随时可切换上方 3 个测试账号体验完整发布、抢单、托管放款与双向评价闭环）。<br/>
+          如需多人联机，可填入你自己的 Cloudflare Workers / Supabase REST 接口地址实现全网实时同步。
+        </div>
+        <label>（可选）自定义云端同步 API URL</label>
+        <input type="text" id="syncEndpoint" placeholder="https://your-worker.workers.dev/api/tasks" />
+        <label>（可选）Gemini API Key（用于 AI 需求润色与智能估价，支持 AQ. / AIza）</label>
+        <input type="password" id="geminiKeyInput" placeholder="粘贴 AQ.Ab... 或 AIza..." />
+        <div class="row" style="margin-top:10px;">
+          <button class="btn-green" onclick="saveSettings()">💾 保存配置</button>
+          <button class="btn-red" onclick="resetDemoData()">↺ 重置演示数据</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 双向评价弹窗（任务评价 / 雇主评价） -->
+  <div id="reviewModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3 id="modalTitle" style="margin-top:0;color:#f5d076;">⭐ 提交评价</h3>
+      <div id="modalSub" style="font-size:12px;color:#94a3b8;margin-bottom:8px;"></div>
+      <label>综合星级评分</label>
+      <select id="revStars">
+        <option value="5">⭐⭐⭐⭐⭐ 5.0 分（非常满意 / 强烈推荐）</option>
+        <option value="4">⭐⭐⭐⭐ 4.0 分（良好 / 顺利完成）</option>
+        <option value="3">⭐⭐⭐ 3.0 分（一般 / 基本达标）</option>
+        <option value="2">⭐⭐ 2.0 分（体验欠佳）</option>
+        <option value="1">⭐ 1.0 分（严重不符）</option>
+      </select>
+      <label>快捷印象标签</label>
+      <input type="text" id="revTags" value="沟通顺畅, 结算爽快, 专业靠谱" />
+      <label>详细评价内容</label>
+      <textarea id="revComment" placeholder="写下对本次任务交付质量或雇主结款速度的真实评价..."></textarea>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn-slate" onclick="closeReviewModal()">取消</button>
+        <button class="btn-gold" onclick="submitReview()">确认提交评价</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DB_KEY = "gigbounty_studio_db_v1";
+    const KEY_GEMINI = "gigbounty_gemini_key";
+    const KEY_SYNC = "gigbounty_sync_url";
+
+    const DEFAULT_DB = {
+      users: {
+        u_employer: { id: "u_employer", name: "星辰科技", role: "雇主", balance: 2500, frozen: 300, employerScore: 4.9, employerCount: 18, workerScore: 5.0, workerCount: 2 },
+        u_worker1:  { id: "u_worker1",  name: "阿杰全栈", role: "接单人", balance: 480, frozen: 0, employerScore: 5.0, employerCount: 1, workerScore: 4.95, workerCount: 34 },
+        u_worker2:  { id: "u_worker2",  name: "林溪设计", role: "接单人", balance: 620, frozen: 0, employerScore: 4.8, employerCount: 3, workerScore: 4.9, workerCount: 27 }
+      },
+      tasks: [
+        {
+          id: "T-1001",
+          mode: "BOUNTY",
+          category: "软件开发",
+          title: "🏆【高额悬赏】开发一款 Telegram Mini App 积分签到页面",
+          reward: 300,
+          escrowed: true,
+          deadline: "72小时内",
+          location: "远程线上",
+          desc: "需适配深色科技风 UI，支持每日签到领积分、邀请好友裂变统计，提供完整 HTML/JS 源码。",
+          status: "OPEN",
+          employerId: "u_employer",
+          workerId: null,
+          deliveryNote: "",
+          createdAt: "2026-11-22 20:15",
+          taskReview: null,
+          employerReview: null
+        },
+        {
+          id: "T-1002",
+          mode: "NORMAL",
+          category: "设计创意",
+          title: "独立站暗黑科技风 640x360 封面图设计（共 3 张）",
+          reward: 85,
+          escrowed: false,
+          deadline: "24小时内",
+          location: "远程线上",
+          desc: "主色调采用深蓝渐变配金色高光，突出零库存自动发货卖点，交付 PNG + PSD 源文件。",
+          status: "COMPLETED",
+          employerId: "u_employer",
+          workerId: "u_worker2",
+          deliveryNote: "已完成 3 套暗黑科技风封面图并上传网盘源文件，请查收。",
+          createdAt: "2026-11-21 14:30",
+          taskReview: { stars: 5, tags: "交付极快, 审美在线", comment: "林溪设计非常懂暗黑科技质感，一次过稿！", by: "星辰科技", at: "2026-11-22 10:05" },
+          employerReview: { stars: 5, tags: "需求明确, 秒放款", comment: "星辰科技需求清晰不折腾，验收完立刻放款，合作愉快！", by: "林溪设计", at: "2026-11-22 10:12" }
+        },
+        {
+          id: "T-1003",
+          mode: "BOUNTY",
+          category: "跑腿代办", "其他",
+          title: "🏆【悬赏】多伦多/萨德伯里本地商超生鲜价格实地拍摄调研",
+          reward: 95,
+          escrowed: true,
+          deadline: "本周五前",
+          location: "Ontario, Canada",
+          desc: "前往指定 2 家本地超市拍摄牛腩、五花肉及日用品价签照片（不少于 20 张清晰图）并整理表格。",
+          status: "IN_PROGRESS",
+          employerId: "u_employer",
+          workerId: "u_worker1",
+          deliveryNote: "",
+          createdAt: "2026-11-22 18:00",
+          taskReview: null,
+          employerReview: null
+        }
+      ]
+    };
+
+    
+    const PLATFORM_FEE_RATE = 0.10;
+    const MIN_WITHDRAW_USDT = 10;
+    const PLATFORM_TON_WALLET = "UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85";
+    const SUPPORT_BOT = "Userstudiobot";
+
+    function copyPlatformWallet() {
+      navigator.clipboard?.writeText(PLATFORM_TON_WALLET).then(() => {
+        alert("✅ 已复制平台 TON 收款地址：\n" + PLATFORM_TON_WALLET);
+      }).catch(() => {
+        prompt("请手动复制平台 TON 收款地址：", PLATFORM_TON_WALLET);
+      });
+    }
+
+    function openTonPayLink() {
+      const amt = parseFloat(document.getElementById("pubReward").value || "10");
+      const title = encodeURIComponent("GigBounty_" + (document.getElementById("pubTitle").value.trim().slice(0, 18) || "Task"));
+      const tonUrl = "ton://transfer/" + PLATFORM_TON_WALLET + "?text=" + title + "_USDT_" + amt;
+      window.open(tonUrl, "_blank");
+    }
+
+    function openSupportBot(topic) {
+      const url = "https://t.me/" + SUPPORT_BOT + "?start=" + encodeURIComponent(topic || "gig_support");
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    }
+
+    function requestWithdraw() {
+      const amt = parseFloat(document.getElementById("wdAmount").value || "0");
+      const wallet = (document.getElementById("wdWallet").value || "").trim();
+      if (amt < MIN_WITHDRAW_USDT) return alert("最低提现门槛为 " + MIN_WITHDRAW_USDT + " USDT！");
+      if (!wallet || wallet.length < 20) return alert("请填写有效的 TON 收款钱包地址！");
+      const u = state.users[activeUserId];
+      if (u.balance < amt) return alert("可用余额不足（当前可用：$" + u.balance.toFixed(2) + "）！");
+
+      const syncUrl = (localStorage.getItem(KEY_SYNC) || "").trim().replace(/\/+$/, "");
+      if (syncUrl) {
+        fetch(syncUrl + "/api/gig/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tg_id: u.id, username: u.name, amount_usdt: amt, ton_wallet: wallet })
+        }).then(r => r.json()).then(d => {
+          if (!d.ok) return alert("提现失败：" + (d.error || "未知错误"));
+          u.balance -= amt;
+          saveDB();
+          alert("✅ 提现申请已推送至云端后台，将通过 @" + SUPPORT_BOT + " 审核打款！");
+        }).catch(e => alert("云端请求失败：" + e.message));
+        return;
+      }
+
+      u.balance -= amt;
+      saveDB();
+      if (confirm("✅ 已扣减余额 $" + amt + " 并生成提现工单！\n是否立即跳转 @" + SUPPORT_BOT + " 发送提现收款地址加速审核？")) {
+        openSupportBot("withdraw_" + amt + "USDT_" + wallet.slice(0, 12));
+      }
+    }
+
+    function initTelegramMiniApp() {
+      const tg = window.Telegram?.WebApp;
+      if (!tg) return;
+      tg.ready();
+      tg.expand();
+      const tgUser = tg.initDataUnsafe?.user;
+      if (tgUser && tgUser.id) {
+        const uid = "tg_" + tgUser.id;
+        const uname = tgUser.username ? "@" + tgUser.username : (tgUser.first_name || "TG用户");
+        if (!state.users[uid]) {
+          state.users[uid] = {
+            id: uid, name: uname, role: "Telegram用户",
+            balance: 0, frozen: 0, employerScore: 5.0, employerCount: 0, workerScore: 5.0, workerCount: 0
+          };
+          saveDB();
+        }
+        const sel = document.getElementById("currentUserSelect");
+        if (!Array.from(sel.options).some(o => o.value === uid)) {
+          const opt = document.createElement("option");
+          opt.value = uid;
+          opt.textContent = "✈️ TG本人 · " + uname;
+          sel.prepend(opt);
+        }
+        sel.value = uid;
+        activeUserId = uid;
+        initQueryBridge();
+      initTelegramMiniApp();
+      renderAll();
+      }
+    }
+
+    
+    function initQueryBridge() {
+      const q = new URLSearchParams(window.location.search);
+      const apiParam = (q.get("api") || "").trim();
+      if (apiParam && !localStorage.getItem(KEY_SYNC)) {
+        localStorage.setItem(KEY_SYNC, apiParam);
+        const inp = document.getElementById("syncEndpoint");
+        if (inp) inp.value = apiParam;
+      }
+      const tgId = (q.get("tg_id") || "").trim();
+      if (tgId && !window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+        const uid = "tg_" + tgId;
+        const uname = q.get("tg_username") ? "@" + q.get("tg_username") : (q.get("tg_name") || "TG用户");
+        if (!state.users[uid]) {
+          state.users[uid] = {
+            id: uid, name: uname, role: "Telegram用户",
+            balance: 0, frozen: 0, employerScore: 5.0, employerCount: 0, workerScore: 5.0, workerCount: 0
+          };
+          saveDB();
+        }
+        const sel = document.getElementById("currentUserSelect");
+        if (sel) {
+          if (!Array.from(sel.options).some(o => o.value === uid)) {
+            const opt = document.createElement("option");
+            opt.value = uid;
+            opt.textContent = "✈️ TG本人 · " + uname;
+            sel.prepend(opt);
+          }
+          sel.value = uid;
+          activeUserId = uid;
+        }
+      }
+    }
+
+    let state = loadDB();
+    let activeUserId = "u_employer";
+    let reviewTarget = null; // { taskId, kind: 'task' | 'employer' }
+
+    function loadDB() {
+      try {
+        const raw = localStorage.getItem(DB_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_DB));
+    }
+
+    function saveDB() {
+      localStorage.setItem(DB_KEY, JSON.stringify(state));
+      renderAll();
+    }
+
+    function resetDemoData() {
+      state = JSON.parse(JSON.stringify(DEFAULT_DB));
+      saveDB();
+      alert("✅ 已恢复初始演示数据！");
+    }
+
+    function switchActiveUser() {
+      activeUserId = document.getElementById("currentUserSelect").value;
+      renderAll();
+    }
+
+    function switchTab(id, btn) {
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("panel-" + id).classList.add("active");
+      btn.classList.add("active");
+      renderAll();
+    }
+
+    function renderWallet() {
+      const u = state.users[activeUserId];
+      document.getElementById("walletBar").innerHTML =
+        '<div class="stat-card"><div class="stat-label">可用余额</div><div class="stat-val">$' + u.balance.toFixed(2) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">悬赏托管冻结中</div><div class="stat-val" style="color:#38bdf8;">$' + u.frozen.toFixed(2) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">雇主信用评分</div><div class="stat-val" style="color:#86efac;">⭐ ' + u.employerScore.toFixed(2) + ' (' + u.employerCount + '单)</div></div>' +
+        '<div class="stat-card"><div class="stat-label">接单人任务评分</div><div class="stat-val" style="color:#c4b5fd;">⭐ ' + u.workerScore.toFixed(2) + ' (' + u.workerCount + '单)</div></div>';
+    }
+
+    function statusBadge(st) {
+      const map = {
+        OPEN: ['pill-status-open', '🟢 招募中（可接单）'],
+        IN_PROGRESS: ['pill-status-progress', '🔵 进行中'],
+        SUBMITTED: ['pill-status-submitted', '🟣 已交付待验收'],
+        COMPLETED: ['pill-status-done', '✅ 已完成结算']
+      };
+      const [cls, txt] = map[st] || ['pill-status-open', st];
+      return '<span class="pill ' + cls + '">' + txt + '</span>';
+    }
+
+    function renderTaskCard(t, contextMode) {
+      const emp = state.users[t.employerId];
+      const wrk = t.workerId ? state.users[t.workerId] : null;
+      const isBounty = t.mode === "BOUNTY";
+
+      let actions = "";
+      if (t.status === "OPEN") {
+        if (t.employerId === activeUserId) {
+          actions += '<button class="btn-slate" disabled>等待接单人抢单...</button>';
+          actions += '<button class="btn-red" onclick="cancelTask(\'' + t.id + '\')">撤回任务</button>';
+        } else {
+          actions += '<button class="btn-green" onclick="acceptTask(\'' + t.id + '\')">⚡ 立即接受任务</button>';
+        }
+      } else if (t.status === "IN_PROGRESS") {
+        if (t.workerId === activeUserId) {
+          actions += '<button class="btn-gold" onclick="submitWork(\'' + t.id + '\')">📤 提交交付成果</button>';
+        } else {
+          actions += '<span style="font-size:12px;color:#93c5fd;">承接人：' + wrk.name + '（⭐' + wrk.workerScore.toFixed(1) + '）正在执行中</span>';
+        }
+      } else if (t.status === "SUBMITTED") {
+        if (t.employerId === activeUserId) {
+          actions += '<button class="btn-green" onclick="approveAndPay(\'' + t.id + '\')">✅ 确认验收并放款 $' + t.reward + '</button>';
+        } else {
+          actions += '<span style="font-size:12px;color:#d8b4fe;">已提交交付，等待雇主验收打款...</span>';
+        }
+      } else if (t.status === "COMPLETED") {
+        if (t.employerId === activeUserId && !t.taskReview) {
+          actions += '<button class="btn-gold" onclick="openReviewModal(\'' + t.id + '\', \'task\')">⭐ 评价任务交付</button>';
+        }
+        if (t.workerId === activeUserId && !t.employerReview) {
+          actions += '<button class="btn-gold" onclick="openReviewModal(\'' + t.id + '\', \'employer\')">⭐ 评价雇主信用</button>';
+        }
+      }
+
+      let extraHtml = "";
+      if (t.deliveryNote) {
+        extraHtml += '<div class="review-box" style="border-color:#a855f7;"><b>📦 交付说明：</b>' + t.deliveryNote + '</div>';
+      }
+      if (t.taskReview) {
+        extraHtml += '<div class="review-box"><b>🛠️ 雇主对任务评价（⭐' + t.taskReview.stars + '.0 · ' + t.taskReview.tags + '）：</b>' + t.taskReview.comment + '</div>';
+      }
+      if (t.employerReview) {
+        extraHtml += '<div class="review-box" style="border-color:#f5d076;"><b>🏢 接单人对雇主评价（⭐' + t.employerReview.stars + '.0 · ' + t.employerReview.tags + '）：</b>' + t.employerReview.comment + '</div>';
+      }
+
+      return '<div class="task-item ' + (isBounty ? 'bounty' : '') + '">' +
+        '<div class="task-head">' +
+          '<div class="task-title">' + t.title + '</div>' +
+          '<div class="reward-tag">$' + t.reward + (t.escrowed ? ' · 已托管' : '') + '</div>' +
+        '</div>' +
+        '<div class="meta-row">' +
+          (isBounty ? '<span class="pill pill-bounty">🏆 高额悬赏</span>' : '<span class="pill">📌 普通零工</span>') +
+          '<span class="pill">' + t.category + '</span>' +
+          statusBadge(t.status) +
+          '<span class="pill">🏢 雇主：' + emp.name + ' (⭐' + emp.employerScore.toFixed(1) + ')</span>' +
+          '<span class="pill">⏱ ' + t.deadline + ' · 📍 ' + t.location + '</span>' +
+        '</div>' +
+        '<div class="task-desc">' + t.desc + '</div>' +
+        '<div class="task-actions">' + actions + '</div>' +
+        extraHtml +
+      '</div>';
+    }
+
+    function renderHall() {
+      const fType = document.getElementById("filterType").value;
+      const fCat = document.getElementById("filterCategory").value;
+      const sort = document.getElementById("sortOrder").value;
+
+      let list = [...state.tasks];
+      if (fType !== "ALL") list = list.filter(t => t.mode === fType);
+      if (fCat !== "ALL") list = list.filter(t => t.category === fCat);
+
+      if (sort === "reward_desc") list.sort((a, b) => b.reward - a.reward);
+      else if (sort === "employer_rating") list.sort((a, b) => state.users[b.employerId].employerScore - state.users[a.employerId].employerScore);
+
+      document.getElementById("hallList").innerHTML = list.length
+        ? list.map(t => renderTaskCard(t, "hall")).join("")
+        : '<div class="card" style="text-align:center;color:#94a3b8;">暂无符合筛选条件的任务</div>';
+    }
+
+    function renderMyOrders() {
+      const mine = state.tasks.filter(t => t.employerId === activeUserId || t.workerId === activeUserId);
+      document.getElementById("myOrdersList").innerHTML = mine.length
+        ? mine.map(t => renderTaskCard(t, "mine")).join("")
+        : '<div class="card" style="text-align:center;color:#94a3b8;">当前身份暂无发布或承接的任务，去「🔥 任务大厅」看看吧！</div>';
+    }
+
+    function renderReputation() {
+      const users = Object.values(state.users);
+      document.getElementById("userStatsGrid").innerHTML = users.map(u =>
+        '<div class="stat-card">' +
+          '<div class="stat-label">' + u.name + '（' + u.role + '）</div>' +
+          '<div style="font-size:12.5px;margin-top:4px;color:#86efac;">🏢 雇主评分：⭐ ' + u.employerScore.toFixed(2) + '（' + u.employerCount + '条）</div>' +
+          '<div style="font-size:12.5px;margin-top:2px;color:#c4b5fd;">🛠️ 接单评分：⭐ ' + u.workerScore.toFixed(2) + '（' + u.workerCount + '条）</div>' +
+        '</div>'
+      ).join("");
+
+      const feeds = [];
+      state.tasks.forEach(t => {
+        if (t.taskReview) feeds.push({ title: t.title, type: "🛠️ 任务评价", ...t.taskReview });
+        if (t.employerReview) feeds.push({ title: t.title, type: "🏢 雇主评价", ...t.employerReview });
+      });
+      document.getElementById("reviewsFeed").innerHTML = feeds.length
+        ? feeds.map(r =>
+            '<div class="review-box" style="margin-bottom:8px;">' +
+              '<b>' + r.type + ' · ⭐ ' + r.stars + '.0</b> — 评价人：' + r.by + ' <span style="color:#94a3b8;">(' + r.at + ')</span><br/>' +
+              '<span style="color:#f5d076;">标签：' + r.tags + '</span><br/>' +
+              '内容：' + r.comment + '<br/>' +
+              '<span style="font-size:11px;color:#94a3b8;">关联任务：' + r.title + '</span>' +
+            '</div>'
+          ).join("")
+        : '<div style="color:#94a3b8;font-size:13px;">暂无评价记录</div>';
+    }
+
+    // ========== 核心业务动作：发布 / 悬赏托管 / 接单 / 交付 / 验收放款 / 双向评价 ==========
+    function publishTask() {
+      const mode = document.getElementById("pubMode").value;
+      const category = document.getElementById("pubCategory").value;
+      const title = document.getElementById("pubTitle").value.trim();
+      const reward = parseFloat(document.getElementById("pubReward").value || "0");
+      const deadline = document.getElementById("pubDeadline").value.trim() || "72小时内";
+      const location = document.getElementById("pubLocation").value.trim() || "远程线上";
+      const desc = document.getElementById("pubDesc").value.trim();
+
+      if (!title || !desc || reward <= 0) return alert("请填写完整的任务标题、描述和有效赏金！");
+      const emp = state.users[activeUserId];
+      const isBounty = mode === "BOUNTY";
+
+      if (isBounty) {
+        if (emp.balance < reward) return alert("可用余额不足以托管该悬赏金额（当前可用：$" + emp.balance + "）！");
+        emp.balance -= reward;
+        emp.frozen += reward;
+      }
+
+      const newTask = {
+        id: "T-" + Math.floor(1000 + Math.random() * 9000),
+        mode,
+        category,
+        title: isBounty && !title.includes("悬赏") ? "🏆【悬赏】" + title : title,
+        reward,
+        escrowed: isBounty,
+        deadline,
+        location,
+        desc,
+        status: "OPEN",
+        employerId: activeUserId,
+        workerId: null,
+        deliveryNote: "",
+        createdAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+        taskReview: null,
+        employerReview: null
+      };
+
+      state.tasks.unshift(newTask);
+      document.getElementById("pubTitle").value = "";
+      document.getElementById("pubDesc").value = "";
+      saveDB();
+      alert(isBounty ? "✅ 悬赏任务已发布，赏金 $" + reward + " 已托管锁定！" : "✅ 普通零工任务已发布上架！");
+      document.querySelectorAll(".tab-btn")[0].click();
+    }
+
+    function cancelTask(taskId) {
+      const idx = state.tasks.findIndex(t => t.id === taskId);
+      if (idx === -1) return;
+      const t = state.tasks[idx];
+      if (t.escrowed) {
+        const emp = state.users[t.employerId];
+        emp.frozen -= t.reward;
+        emp.balance += t.reward;
+      }
+      state.tasks.splice(idx, 1);
+      saveDB();
+      alert("已撤回任务，若有托管赏金已原路退回可用余额。");
+    }
+
+    function acceptTask(taskId) {
+      const t = state.tasks.find(x => x.id === taskId);
+      if (!t || t.status !== "OPEN") return;
+      if (t.employerId === activeUserId) return alert("不能接自己发布的任务！");
+      t.workerId = activeUserId;
+      t.status = "IN_PROGRESS";
+      saveDB();
+      alert("🎉 抢单成功！请前往「📋 我的订单」按期完成并提交交付成果。");
+    }
+
+    function submitWork(taskId) {
+      const t = state.tasks.find(x => x.id === taskId);
+      if (!t || t.workerId !== activeUserId) return;
+      const note = prompt("请输入交付物链接或完成说明（例如：源码已推送到 GitHub / 设计稿网盘链接）：", "已完成全部需求开发与自测，交付文件已上传，请雇主验收。");
+      if (!note) return;
+      t.deliveryNote = note.trim();
+      t.status = "SUBMITTED";
+      saveDB();
+      alert("📤 已提交交付，等待雇主验收放款！");
+    }
+
+    function approveAndPay(taskId) {
+      const t = state.tasks.find(x => x.id === taskId);
+      if (!t || t.employerId !== activeUserId) return;
+      const emp = state.users[t.employerId];
+      const wrk = state.users[t.workerId];
+
+      if (t.escrowed) {
+        emp.frozen -= t.reward;
+      } else {
+        if (emp.balance < t.reward) return alert("可用余额不足，无法支付赏金！");
+        emp.balance -= t.reward;
+      }
+      const platformFee = Number((t.reward * PLATFORM_FEE_RATE).toFixed(2));
+      const workerNet = Number((t.reward - platformFee).toFixed(2));
+      wrk.balance += workerNet;
+      t.status = "COMPLETED";
+      saveDB();
+      alert("✅ 验收通过！总赏金 $" + t.reward + "，扣除平台 10% 抽佣 ($" + platformFee + ") 后，实得 $" + workerNet + " 已结算至「" + wrk.name + "」账户！");
+    }
+
+    function openReviewModal(taskId, kind) {
+      reviewTarget = { taskId, kind };
+      document.getElementById("modalTitle").innerText = kind === "task" ? "⭐ 提交任务交付评价" : "⭐ 提交雇主信用评价";
+      document.getElementById("modalSub").innerText = kind === "task"
+        ? "评价接单人的交付质量、响应速度与专业度"
+        : "评价雇主的需求清晰度、沟通态度与结款爽快度";
+      document.getElementById("revTags").value = kind === "task" ? "交付准时, 质量过硬, 沟通顺畅" : "需求清晰, 验收爽快, 值得信赖";
+      document.getElementById("revComment").value = "";
+      document.getElementById("reviewModal").classList.add("show");
+    }
+
+    function closeReviewModal() {
+      document.getElementById("reviewModal").classList.remove("show");
+      reviewTarget = null;
+    }
+
+    function submitReview() {
+      if (!reviewTarget) return;
+      const t = state.tasks.find(x => x.id === reviewTarget.taskId);
+      const stars = parseInt(document.getElementById("revStars").value, 10);
+      const tags = document.getElementById("revTags").value.trim() || "好评";
+      const comment = document.getElementById("revComment").value.trim() || "合作非常顺利，五星好评！";
+      const reviewer = state.users[activeUserId];
+
+      const rec = {
+        stars,
+        tags,
+        comment,
+        by: reviewer.name,
+        at: new Date().toISOString().slice(0, 16).replace("T", " ")
+      };
+
+      if (reviewTarget.kind === "task") {
+        t.taskReview = rec;
+        const wrk = state.users[t.workerId];
+        wrk.workerScore = (wrk.workerScore * wrk.workerCount + stars) / (wrk.workerCount + 1);
+        wrk.workerCount += 1;
+      } else {
+        t.employerReview = rec;
+        const emp = state.users[t.employerId];
+        emp.employerScore = (emp.employerScore * emp.employerCount + stars) / (emp.employerCount + 1);
+        emp.employerCount += 1;
+      }
+
+      closeReviewModal();
+      saveDB();
+      alert("🎉 评价已发布并计入对方信用档案！");
+    }
+
+    // ========== 可选 Gemini AI 需求润色与估价 ==========
+    const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"];
+
+    async function aiPolishTask() {
+      const apiKey = (localStorage.getItem(KEY_GEMINI) || "").trim();
+      const title = document.getElementById("pubTitle").value.trim();
+      const desc = document.getElementById("pubDesc").value.trim();
+      if (!title && !desc) return alert("请先输入初步的任务标题或简单想法！");
+      if (!(apiKey.startsWith("AIza") || apiKey.startsWith("AQ."))) {
+        return alert("请先在「⚙️ 设置/同步」中填入 Gemini API Key，即可自动润色任务书与建议悬赏报价。");
+      }
+      const box = document.getElementById("pubAiBox");
+      box.style.display = "block";
+      box.textContent = "⏳ AI 正在为您生成标准零工需求说明书与合理赏金区间...";
+      const prompt = "你是一位资深的零工平台项目经理。请将以下简略需求润色为清晰、防纠纷的【任务交付清单 + 验收标准 + 建议悬赏报价(USD)】：\n标题：" + title + "\n补充：" + desc;
+
+      for (const m of GEMINI_MODELS) {
+        try {
+          const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent?key=" + encodeURIComponent(apiKey), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            box.textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            return;
+          }
+        } catch (e) {}
+      }
+      box.textContent = "❌ 请求失败，请检查网络或 API Key 配额。";
+    }
+
+    function saveSettings() {
+      localStorage.setItem(KEY_SYNC, document.getElementById("syncEndpoint").value.trim());
+      localStorage.setItem(KEY_GEMINI, document.getElementById("geminiKeyInput").value.trim());
+      alert("✅ 配置已保存！");
+    }
+
+    function renderAll() {
+      renderWallet();
+      renderHall();
+      renderMyOrders();
+      renderReputation();
+    }
+
+    (function boot() {
+      document.getElementById("syncEndpoint").value = localStorage.getItem(KEY_SYNC) || "";
+      document.getElementById("geminiKeyInput").value = localStorage.getItem(KEY_GEMINI) || "";
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
+

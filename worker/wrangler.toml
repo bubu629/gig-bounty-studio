@@ -3,15 +3,17 @@ main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 [vars]
-PLATFORM_FEE_RATE = "0.1"
+CHANNEL_ID = "@GigBounty6"
+PLATFORM_FEE_RATE = "0.2"
 PLATFORM_TON_WALLET = "UQAi7GWc5DAPgpJxX7eOA_NijNeUHxpiirzAFi1OerKDRt85"
 MIN_WITHDRAW_USDT = "10"
-SUPPORT_BOT_USERNAME = "Userstudiobot"
+SUPPORT_BOT_USERNAME = "GigBountybot"
+MINIAPP_LINK = "https://t.me/GigBountybot"
 
 # 创建 D1 后将 database_id 填入下方:
 # npx wrangler d1 create gig-bounty-db
 [[d1_databases]]
 binding = "DB"
 database_name = "gig-bounty-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "7211267d-de36-4078-ad12-b38f3980190c"
 
